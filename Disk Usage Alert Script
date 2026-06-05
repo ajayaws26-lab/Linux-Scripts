@@ -1,0 +1,41 @@
+#Check Disk alert:
+# =========================================
+
+#!/bin/bash
+
+# ==========================================
+# Disk Usage Alert Script
+# ==========================================
+
+# 1. Configuration
+THRESHOLD=80                      # Alert threshold in percentage (e.g., 80)
+EMAIL="admin@yourdomain.com"      # Email address to receive alerts
+HOSTNAME=$(hostname)              # Gets the server name automatically
+
+# 2. Process Disk Usage
+# df -Ph: Get disk space in human-readable, POSIX format
+# grep -vE: Ignore header row and virtual/temporary filesystems
+df -Ph | grep -vE '^Filesystem|tmpfs|cdrom|loop|udev|devtmpfs' | awk '{ print $5 " " $1 " " $6 }' | while read output;
+do
+  # Extract the usage percentage, partition name, and mount point
+  USAGE=$(echo $output | awk '{ print $1}' | cut -d'%' -f1)
+  PARTITION=$(echo $output | awk '{ print $2 }')
+  MOUNT_POINT=$(echo $output | awk '{ print $3 }')
+
+  # 3. Check against threshold
+  if [ "$USAGE" -ge "$THRESHOLD" ]; then
+    
+    # Construct the alert message
+    ALERT_MSG="CRITICAL: Disk Space Alert on $HOSTNAME\n\nPartition: $PARTITION\nMount Point: $MOUNT_POINT\nUsage: ${USAGE}% (Threshold: ${THRESHOLD}%)"
+    
+    # Print to console (useful for testing)
+    echo -e "$ALERT_MSG"
+    
+    # Log the warning to the system log
+    logger "DiskMonitor: Partition $PARTITION ($MOUNT_POINT) is at ${USAGE}%"
+    
+    # Send email alert (Uncomment the line below to enable)
+    # echo -e "$ALERT_MSG" | mail -s "Disk Space Alert: $HOSTNAME is at ${USAGE}%" "$EMAIL"
+    
+  fi
+done
