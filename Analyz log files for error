@@ -25,7 +25,9 @@ for LOG_FILE in $LOG_FILES; do
 		
 		echo -e "\nNumber of $PATTERN logs found in $LOG_FILE" >> "$REPORT_FILE"
 		grep -c "$PATTERN" "$LOG_FILE" >> "$REPORT_FILE"
-	
-	
+
 	done
 done
+
+# Append output to file
+echo "==== Analysing log files in $LOG_DIR directory ====" >> "$REPORT_FILE
