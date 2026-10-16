@@ -30,4 +30,6 @@ for LOG_FILE in $LOG_FILES; do
 done
 
 # Append output to file
-echo "==== Analysing log files in $LOG_DIR directory ====" >> "$REPORT_FILE
+echo "==== Analyzing log files in $LOG_DIR directory ====" >> "$REPORT_FILE
+
+echo -e "\analysis is completed and fine is saved to $REPORT_FILE"
