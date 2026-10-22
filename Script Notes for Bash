@@ -1,14 +1,8 @@
 ====================================================================================================================================================================
+======================================================   Script to Check disk space.     ===========================================================================
 ====================================================================================================================================================================
 
-Script to Check disk space.
 
-====================================================================================================================================================================
-====================================================================================================================================================================
-
-1. Check Disk alert.
-
-check disk space 
 ---------------------------------------------------------------------------------------------------------------------------------------------------------
 You can monitor disk utilization using the df command. To automate this, you can write a Bash script that extracts the usage percentage of your mounted filesystems and triggers an alert if any exceed a specified threshold.
 
@@ -50,15 +44,10 @@ chmod +x check_disk.sh
 
 ./check_disk.sh
 
-====================================================================================================================================================================
-====================================================================================================================================================================
-
-Script to send alerts over email.
 
 ====================================================================================================================================================================
+=========================================================   Script to send alerts over email.     ==================================================================
 ====================================================================================================================================================================
-
-
 
 Mail alert in bin/bash
 
@@ -124,11 +113,7 @@ echo "See attached backup." | mail -s "Database Backup" -A /backups/db.sql admin
 echo "See attached backup." | mutt -s "Database Backup" -a /backups/db.sql -- admin@example.com
 
 ====================================================================================================================================================================
-====================================================================================================================================================================
-
-Script to Check application is running or not
-
-====================================================================================================================================================================
+===================================================   Script to Check application is running or not     ============================================================
 ====================================================================================================================================================================
 
 Creating a reliable bash script to monitor application status requires checking active process IDs (PIDs) or systemd service states. The most robust tool for standard processes is pgrep, as it avoids the common pitfalls of the older ps aux | grep method (which often accidentally matches the grep command itself).
@@ -194,5 +179,76 @@ chmod +x check_app.sh
 2. Test the Positive State: Start your application, run ./check_app.sh, and verify it outputs the [OK] message.
 
 3. Test the Negative State: Stop your application, run ./check_app.sh, and verify it outputs the [WARNING] or [CRITICAL] message.
+
+
+============================================================================================================================================
+=================================   Script for Backup / Removal of logs file after 5-7 days    =============================================
+============================================================================================================================================
+
+The most reliable way to manage log retention in a bash script is using the find command combined with the -mtime (modified time) flag.
+
+Test Before Deleting
+Always run your find command without the -delete or -exec rm flag first (e.g., find /your/log/dir -type f -name "*.log" -mtime +7) to verify exactly which files will be affected before running the destructive script.
+
+-------------------------------------------------------------------------------------------------------
+Option 1: Script to Remove Old Logs
+If you simply want to purge log files older than 7 days to free up disk space, use this script.
+-------------------------------------------------------------------------------------------------------
+
+#!/bin/bash
+
+# Configuration
+LOG_DIR="/var/log/myapp"
+DAYS_TO_KEEP=7
+
+# Find and delete .log files older than 7 days
+find "$LOG_DIR" -type f -name "*.log" -mtime +"$DAYS_TO_KEEP" -delete
+
+# Verification step
+if [ $? -eq 0 ]; then
+    echo "[OK] Logs older than $DAYS_TO_KEEP days have been removed."
+else
+    echo "[ERROR] Failed to clean up logs in $LOG_DIR."
+fi
+
+------------- Note: The + in +"$DAYS_TO_KEEP" is critical. It tells find to match files modified strictly greater than 7 days ago. -------------
+
+----------------------------------------------------------------------------------------------
+Option 2: Script to Backup and Compress Old Logs
+If compliance or debugging requires you to keep the logs, this script moves files older than 5 days into an archive directory and compresses them into a single tar.gz file before removing the originals.
+----------------------------------------------------------------------------------------------
+
+
+#!/bin/bash
+
+# Configuration
+LOG_DIR="/var/log/myapp"
+BACKUP_DIR="/archive/myapp_logs"
+DAYS_TO_KEEP=5
+TIMESTAMP=$(date +"%Y%m%d_%H%M%S")
+ARCHIVE_NAME="logs_backup_$TIMESTAMP.tar.gz"
+
+# Ensure the backup directory exists
+mkdir -p "$BACKUP_DIR"
+
+# Step 1: Compress files older than 5 days directly into the backup folder
+# xargs is used here to safely handle a large number of files or spaces in filenames
+find "$LOG_DIR" -type f -name "*.log" -mtime +"$DAYS_TO_KEEP" -print0 | xargs -0 tar -czf "$BACKUP_DIR/$ARCHIVE_NAME"
+
+# Step 2: If the backup succeeded, delete the original files
+if [ -f "$BACKUP_DIR/$ARCHIVE_NAME" ]; then
+    find "$LOG_DIR" -type f -name "*.log" -mtime +"$DAYS_TO_KEEP" -delete
+    echo "[OK] Old logs backed up to $ARCHIVE_NAME and removed from source."
+else
+    echo "[ERROR] Backup failed. Original logs were not deleted."
+fi
+
+
+--------------------------------------------------------------------------
+Deployment
+Save your chosen script (e.g., log_cleanup.sh), make it executable using chmod +x log_cleanup.sh, and schedule it in cron to run automatically (e.g., daily at midnight: 0 0 * * * /path/to/log_cleanup.sh).
+--------------------------------------------------------------------------
+
+
 
 
