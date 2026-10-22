@@ -1,0 +1,111 @@
+1. Check Disk alert.
+
+check disk space 
+---------------------------------------------------------------------------------------------------------------------------------------------------------
+You can monitor disk utilization using the df command. To automate this, you can write a Bash script that extracts the usage percentage of your mounted filesystems and triggers an alert if any exceed a specified threshold.
+
+Here is a script that checks all local filesystems and warns you if any pass a defined limit:
+---------------------------------------------------------------------------------------------------------------------------------------------------------
+
+
+#!/bin/bash
+
+# Set the maximum allowed disk usage percentage
+THRESHOLD=80
+
+# Run df for local filesystems, skip the header row, and process usage/mount points
+df -hl | awk 'NR>1 {print $5, $6}' | sed 's/%//g' | while read USAGE MOUNT; do
+    
+    # Ensure USAGE is a number (ignores empty or non-standard lines)
+    if [[ "$USAGE" =~ ^[0-9]+$ ]]; then
+        if [ "$USAGE" -ge "$THRESHOLD" ]; then
+            echo "WARNING: Disk utilization on $MOUNT is at ${USAGE}% (Threshold: ${THRESHOLD}%)"
+            
+            # Note: You can replace the echo above with the mail command from the previous script
+            # echo "Disk $MOUNT is at ${USAGE}%" | mail -s "Disk Alert: $MOUNT" admin@example.com
+        fi
+    fi
+done
+
+
+---------------------
+How to use it:
+---------------------
+
+1. Save the code to a file, for example: check_disk.sh
+
+2. Make the script executable:
+
+chmod +x check_disk.sh
+
+3. Run the script:
+
+./check_disk.sh
+
+
+
+
+=========================================
+Mail alert in bin/bash
+
+Bash relies on command-line mail utilities like mail, mailx, or sendmail to send email notifications, as it has no built-in SMTP client. The most common approach is piping text into the mail command.
+=========================================
+-----------------------------------------------------------------------------------------------------------------------------------
+Prerequisites
+
+Your system must have a mail utility installed and an underlying Mail Transfer Agent (MTA) like Postfix or Sendmail configured.
+------------------------------------------------------------------------------------------------------------------------------------
+
+For Debian/Ubuntu:
+
+sudo apt install mailutils
+
+For RHEL/CentOS:
+
+sudo yum install mailx
+
+--------------------------------------
+The Standard Bash Script Pattern
+
+You can pipe a string directly into the mail command. Here is a robust script template using variables for clean formatting:
+--------------------------------------
+
+#!/bin/bash
+
+# Configuration
+RECIPIENT="admin@example.com"
+SUBJECT="Server Alert: High CPU Usage"
+BODY="Warning: CPU usage has exceeded 90% on $(hostname) at $(date)."
+
+# Send the email
+echo "$BODY" | mail -s "$SUBJECT" "$RECIPIENT"
+
+# Check if the command succeeded
+if [ $? -eq 0 ]; then
+    echo "Notification sent successfully."
+else
+    echo "Failed to send notification."
+fi
+
+--------------------------------------
+Advanced Use Cases
+-----------------------------------------------------------
+Sending a file's contents as the body:
+Instead of echo, use input redirection to send a log file:
+-----------------------------------------------------------
+
+
+mail -s "Daily Log Report" admin@example.com < /var/log/daily_report.log
+
+-------------------------------------------------------------------------------------------------------------------------------------------------
+Sending attachments:
+If your mail version supports the -A or -a flag (depends on the OS), you can attach files directly. Alternatively, mutt is highly reliable for attachments:
+-------------------------------------------------------------------------------------------------------------------------------------------------
+
+# Using mail (Ubuntu/Debian)
+echo "See attached backup." | mail -s "Database Backup" -A /backups/db.sql admin@example.com
+
+# Using mutt (Universal)
+echo "See attached backup." | mutt -s "Database Backup" -a /backups/db.sql -- admin@example.com
+
+
